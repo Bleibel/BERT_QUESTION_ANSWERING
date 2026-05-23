@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro-BERT QA | NLP Course Project</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="site-header">
+            <div class="container">
+                <div class="logo">
+                    <span class="logo-icon">&#128300;</span>
+                    <span class="logo-text">Micro-BERT QA</span>
+                </div>
+                <nav class="site-nav">
+                    <a href="#demo">Demo</a>
+                    <a href="#methodology">Methodology</a>
+                    <a href="#about">About</a>
+                </nav>
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="container">
+                    <h1>Question Answering with <span class="accent">Micro-BERT</span></h1>
+                    <p class="subtitle">
+                        A 1.8-million parameter transformer fine-tuned for extractive QA.
+                        Ask a question about any passage and watch the model pinpoint the answer span.
+                    </p>
+                    {% if model_info %}
+                    <div class="model-badge">
+                        <span class="badge-label">Active Model</span>
+                        <span class="badge-name">{{ model_info.name }}</span>
+                        <span class="badge-params">{{ model_info.params }} parameters</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section id="demo" class="demo-section">
+                <div class="container">
+                    <div class="panel qa-panel">
+                        <div class="panel-header">
+                            <h2>Interactive Demo</h2>
+                            <span class="badge">Live</span>
+                        </div>
+
+                        <form method="POST" action="/" class="qa-form">
+                            <div class="form-group">
+                                <label for="passage">
+                                    Context Passage
+                                    <span class="hint">Paste any paragraph or article here</span>
+                                </label>
+                                <textarea
+                                    name="passage"
+                                    id="passage"
+                                    rows="8"
+                                    placeholder="Enter your passage here..."
+                                    required
+                                >{{ request.form.get("passage", "") }}</textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group flex-2">
+                                    <label for="question">
+                                        Question
+                                        <span class="hint">Ask something answerable from the passage</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="question"
+                                        id="question"
+                                        placeholder="e.g., What is the capital of Germany?"
+                                        value="{{ request.form.get('question', '') }}"
+                                        required
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="chunk_size">Chunk Size</label>
+                                    <input
+                                        type="number"
+                                        name="chunk_size"
+                                        id="chunk_size"
+                                        value="{{ request.form.get('chunk_size', '384') }}"
+                                        min="128"
+                                        max="512"
+                                        step="32"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="stride">Stride</label>
+                                    <input
+                                        type="number"
+                                        name="stride"
+                                        id="stride"
+                                        value="{{ request.form.get('stride', '128') }}"
+                                        min="32"
+                                        max="256"
+                                        step="32"
+                                    />
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <span>Get Answer</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </form>
+
+                        {% if error %}
+                        <div class="alert alert-error">
+                            <strong>Error:</strong> {{ error }}
+                        </div>
+                        {% endif %}
+
+                        {% if answer %}
+                        <div class="result-card">
+                            <div class="result-header">
+                                <h3>Predicted Answer</h3>
+                                <span class="confidence-pill">
+                                    Confidence: {{ confidence }}
+                                </span>
+                            </div>
+                            <div class="answer-box">
+                                {{ answer }}
+                            </div>
+                        </div>
+
+                        {% if highlighted_passage %}
+                        <div class="result-card">
+                            <div class="result-header">
+                                <h3>Answer in Context</h3>
+                            </div>
+                            <div class="context-box">
+                                <p>
+                                    {{ highlighted_passage[0] }}
+                                    <mark>{{ highlighted_passage[1] }}</mark>
+                                    {{ highlighted_passage[2] }}
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <section id="methodology" class="info-section alt">
+                <div class="container">
+                    <h2>Methodology</h2>
+                    <div class="cards">
+                        <div class="info-card">
+                            <div class="card-icon">1</div>
+                            <h3>Tokenization</h3>
+                            <p>The passage and question are tokenized using WordPiece. Special tokens <code>[CLS]</code> and <code>[SEP]</code> mark boundaries.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">2</div>
+                            <h3>Sliding Window</h3>
+                            <p>Long passages exceeding the model's max length are split into overlapping chunks with a configurable stride to preserve context.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">3</div>
+                            <h3>Span Prediction</h3>
+                            <p>Micro-BERT outputs start/end logits. Softmax converts these to probabilities, and the highest-probability span is selected as the answer.</p>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-icon">4</div>
+                            <h3>Answer Selection</h3>
+                            <p>Across all chunks, the span with the highest confidence score is chosen and mapped back to the original text positions.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="about" class="info-section">
+                <div class="container">
+                    <h2>About this Project</h2>
+                    <div class="about-content">
+                        <p>
+                            This project implements an <strong>extractive question-answering system</strong> for a university NLP course.
+                            Instead of using a 340M-parameter BERT-large model, we designed and trained a custom <strong>Micro-BERT</strong>
+                            with only <strong>~1.8 million parameters</strong>.
+                        </p>
+                        <ul>
+                            <li><strong>Model:</strong> Custom Micro-BERT (2 layers, 56 hidden, 2 heads)</li>
+                            <li><strong>Parameters:</strong> ~1,795,642 (0.5% of BERT-large)</li>
+                            <li><strong>Dataset:</strong> SQuAD 1.1 (Stanford Question Answering Dataset)</li>
+                            <li><strong>Metrics:</strong> Exact Match (EM) and F1-score</li>
+                            <li><strong>Features:</strong> Sliding-window chunking, confidence scoring, REST API, training pipeline</li>
+                        </ul>
+                        <p class="small">
+                            The full source code, training scripts, evaluation, and analysis are available in the repository.
+                            Run <code>python train.py</code> to fine-tune from scratch, or <code>python run_evaluation.py</code> to test.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container">
+                <p>NLP Course Project &mdash; Question Answering using a 1.8M Micro-BERT</p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

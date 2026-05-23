@@ -1,83 +1,328 @@
+# Question Answering using a 1.8M Micro-BERT
 
-# Question Answering App with BERT and Flask
+> **NLP Course Project** | Extractive Reading Comprehension with a Custom Tiny Transformer
 
-Welcome to the Question Answering App with BERT and Flask project! This project demonstrates a user-friendly web application that uses a pre-trained BERT-based model to answer questions based on a given passage. The app is built using Python, the transformers library for BERT, Flask for the web framework, and HTML/CSS for the interactive user interface.
+This project implements a complete, end-to-end **extractive Question Answering (QA)** system using a custom-designed **Micro-BERT** transformer. With only **~1.8 million parameters**, it is roughly **200× smaller** than BERT-large, yet still capable of identifying precise answer spans in a given passage.
 
-
-## Overview
-
-Have you ever wanted to quickly find answers to specific questions within a large body of text? This app is designed to address that need. Simply input a passage of text and a question, and the app will provide you with a concise answer, highlighting the relevant sections of the passage.
-
-![image](https://github.com/Ananya01Agrawal/BERT-Question-Answering/assets/99130567/59bd4c75-d852-4cbc-b7df-def57052fe43)
-
-
-## BERT: Background and Model
-
-BERT (Bidirectional Encoder Representations from Transformers) is a revolutionary language model developed by Google. Unlike traditional language models that read text in one direction, BERT considers the context of words from both the left and right directions simultaneously. This bidirectional understanding allows BERT to capture deeper contextual relationships between words, resulting in more accurate language understanding and generation.
-
-The BERT model is pre-trained on a massive amount of text data, learning to predict missing words within sentences. This pre-training enables BERT to develop a rich understanding of language nuances and semantics. It has shown remarkable performance across various natural language processing tasks, such as text classification, named entity recognition, and, importantly, question answering.
-
-For this project, we're using a specific variant of the BERT model known as "bert-large-uncased-whole-word-masking-finetuned-squad." This variant has been fine-tuned on the Stanford Question Answering Dataset (SQuAD), making it well-suited for question answering tasks. It's capable of processing both the passage and the question to provide accurate answers.
-
-
-### What is SQuAD?
-
-Stanford Question Answering Dataset (SQuAD) is a reading comprehension dataset, consisting of questions posed by crowdworkers on a set of Wikipedia articles, where the answer to every question is a segment of text, or span, from the corresponding reading passage, or the question might be unanswerable.
-
-![image](https://github.com/Ananya01Agrawal/BERT-Question-Answering-Project/assets/99130567/79cba026-4d26-41cf-a998-5864daa1f517)
-
-For the Question Answering System, BERT takes two parameters, the input question, and passage as a single packed sequence. The input embeddings are the sum of the token embeddings and the segment embeddings.
-
-Token embeddings: A [CLS] token is added to the input word tokens at the beginning of the question and a [SEP] token is inserted at the end of both the question and the paragraph.
-Segment embeddings: A marker indicating Sentence A or Sentence B is added to each token. This allows the model to distinguish between sentences. In the below example, all tokens marked as A belong to the question, and those marked as B belong to the paragraph.
-
-Segment embeddings: A marker indicating Sentence A or Sentence B is added to each token. This allows the model to distinguish between sentences. In the below example, all tokens marked as A belong to the question, and those marked as B belong to the paragraph.
-
-![image](https://github.com/Ananya01Agrawal/BERT-Question-Answering-Project/assets/99130567/df780a94-09f2-4993-8629-a1aaabf02737)
-
-BERT uses “Segment Embeddings” to differentiate the question from the reference text. These are simply two embeddings (for segments “A” and “B”) that BERT learned, and which it adds to the token embeddings before feeding them into the input layer.
-
-![image](https://github.com/Ananya01Agrawal/BERT-Question-Answering-Project/assets/99130567/1fe21c27-b3ae-4cde-8f11-eb2b893bb5ee)
-
-
-For every token in the text, we feed its final embedding into the start token classifier. The start token classifier only has a single set of weights which applies to every word.
-
-After taking the dot product between the output embeddings and the ‘start’ weights, we apply the softmax activation to produce a probability distribution over all of the words. Whichever word has the highest probability of being the start token is the one that we pick.
-
-
-
-
-
-
-
+---
 
 ## Features
 
-- **User-Friendly Interface:** The app provides a simple and intuitive interface for users to input a passage and a question.
-- **Chunking for Large Text:** The app automatically chunks large passages into smaller parts for efficient processing.
-- **BERT for Accurate Answers:** The app leverages the "bert-large-uncased-whole-word-masking-finetuned-squad" model for accurate answers.
-- **Highlighting of Answer Locations:** The app not only provides the answer but also highlights the chunks of the passage that contain the answer.
-- **Robustness:** The app checks for the presence of both the passage and the question before attempting to find an answer, providing user-friendly feedback.
+- **Custom Micro-BERT Architecture:** A hand-tuned transformer with 2 layers, 56 hidden dims, and 2 attention heads (~1.8M params).
+- **Complete Training Pipeline:** Fine-tune from scratch on SQuAD-format data using Hugging Face `Trainer`.
+- **Sliding-Window Chunking:** Handles passages of any length by processing overlapping chunks with configurable stride.
+- **Robust Evaluation:** Implements standard SQuAD metrics — **Exact Match (EM)** and **F1-score**.
+- **Interactive Web Demo:** Clean, modern Flask interface with answer highlighting and confidence scores.
+- **REST API:** Programmatic access via `/api/answer` endpoint.
+- **Modular Design:** Clean separation between model definition, training, evaluation, dataset handling, and demo.
+- **Fully Reproducible:** One-command training and evaluation scripts with built-in sample dataset.
 
-## How to Use
+---
 
-1. **Clone the Repository:** Clone this GitHub repository to your local machine.
+## Quick Start
 
-2. **Set Up the Environment:** Create a virtual environment (optional but recommended) and install the required packages listed in the `requirements.txt` file:
-   
-   ```
-   pip install -r requirements.txt
-   ```
+### 1. Clone & Setup
 
-3. Run the App: xecute the following command to run the Flask app:xecute the following command to run the Flask app:
+```bash
+git clone <your-repo-url>
+cd BERT-Question-Answering-Project
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-    ```bash
-    python app.py
-    ```
+### 2. Train the Micro-BERT (30 seconds on CPU)
 
+```bash
+python train.py
+```
 
-4. Access the App: Open a web browser and navigate to http://127.0.0.1:5000/ to access the app.
+This fine-tunes the model on the built-in 7-example dataset and saves a checkpoint to `checkpoints/micro-bert-qa/`.
 
-5. Input Passage and Question: Once the app is running, you can enter a passage of text and a question in the provided input fields.
+To train on the full SQuAD 1.1 dataset (~20–40 min on CPU):
 
-6. Get the Answer: Click the "Get Answer" button to receive an answer to your question based on the given passage. The app will also highlight the chunks of the passage that contain the answer.
+```bash
+python train.py --dataset squad --epochs 2 --batch_size 8
+```
+
+### 3. Run Evaluation
+
+```bash
+python run_evaluation.py
+```
+
+### 4. Launch the Demo
+
+```bash
+python app.py
+```
+
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
+
+---
+
+## Project Structure
+
+```
+BERT-Question-Answering-Project/
+│
+├── app.py                      # Entry-point launcher for the web demo
+├── train.py                    # Fine-tuning script for Micro-BERT
+├── run_evaluation.py           # CLI script for batch evaluation
+├── requirements.txt            # Python dependencies
+│
+├── src/                        # Core library
+│   ├── __init__.py
+│   ├── micro_bert.py           # Custom ~1.8M-parameter BERT config
+│   ├── model.py                # BERTQA wrapper with sliding-window logic
+│   ├── evaluate.py             # EM & F1 metrics
+│   ├── utils.py                # Text normalization & chunking utilities
+│   └── dataset.py              # SQuAD loader & built-in sample data
+│
+├── demo/                       # Web application
+│   ├── app.py                  # Flask routes (UI + API)
+│   ├── templates/
+│   │   └── index.html          # Modern responsive frontend
+│   └── static/
+│       ├── styles.css          # Custom CSS design system
+│       └── images/
+│
+├── tests/
+│   └── test_evaluate.py        # Unit tests for metrics & utilities
+│
+├── data/
+│   └── sample_squad.json       # Small SQuAD-format dataset for testing
+│
+├── docs/
+│   └── REPORT.md               # Full academic project report
+│
+├── checkpoints/                # Saved model checkpoints (auto-generated)
+│   └── micro-bert-qa/
+│
+├── results/                    # Evaluation outputs (auto-generated)
+│   ├── eval_results.json
+│   └── predictions.json
+│
+└── notebooks/                  # Analysis scripts
+    └── analysis.py
+```
+
+---
+
+## Model Architecture
+
+### Micro-BERT (~1.8M parameters)
+
+| Component | Value |
+|-----------|-------|
+| Hidden Size | 56 |
+| Layers | 2 |
+| Attention Heads | 2 |
+| Intermediate (FFN) | 128 |
+| Max Positions | 512 |
+| Vocabulary | 30,522 (WordPiece) |
+| **Total Parameters** | **~1,795,642** |
+
+### Architecture Flow
+
+```
+Question + Passage
+       |
+       v
+  [Tokenize with WordPiece]
+       |
+       v
+  [CLS] Question [SEP] Passage [SEP]
+       |
+       v
+   Micro-BERT Encoder
+   (2 layers, 56 hidden dim, 2 heads)
+       |
+   +--------+--------+
+   |                 |
+Start Logits     End Logits
+   |                 |
+   v                 v
+Softmax          Softmax
+   |                 |
+   +--------+--------+
+            |
+            v
+    Argmax(start, end)
+            |
+            v
+    Extracted Answer Span
+```
+
+### Sliding-Window Chunking
+
+Micro-BERT, like all BERT variants, is limited to a 512-token input. For long passages, we use a **sliding-window approach**:
+
+1. Split the passage into overlapping chunks (default: 384 tokens per chunk, 128 token stride).
+2. Run the QA pipeline on each chunk independently.
+3. Select the answer span with the highest confidence score across all chunks.
+4. Map character positions back to the original text for accurate highlighting.
+
+---
+
+## Training
+
+The `train.py` script provides a complete fine-tuning pipeline using the Hugging Face `Trainer` API.
+
+### Default (Sample Data)
+```bash
+python train.py
+```
+- Dataset: `data/sample_squad.json` (7 examples)
+- Epochs: 10
+- Batch size: 2
+- Time: ~30 seconds on CPU
+- Output: `checkpoints/micro-bert-qa/`
+
+### Full SQuAD 1.1
+```bash
+python train.py --dataset squad --epochs 2 --batch_size 8
+```
+- Downloads the full SQuAD 1.1 dataset automatically
+- Adjust epochs and batch size based on your hardware
+
+### Custom Dataset
+```bash
+python train.py --dataset path/to/your/squad.json --epochs 5
+```
+
+---
+
+## Evaluation Metrics
+
+We report two standard SQuAD metrics:
+
+| Metric | Description |
+|--------|-------------|
+| **Exact Match (EM)** | Percentage of predictions that exactly match the ground truth after text normalization (lowercasing, removing articles & punctuation). |
+| **F1-Score** | Token-level overlap between prediction and ground truth. More forgiving than EM and better reflects partial correctness. |
+
+### Sample Results
+
+On the built-in 7-example dataset after training:
+
+```
+==================================================
+Evaluation Results
+==================================================
+Model  : checkpoints/micro-bert-qa
+Params : 1,793,266
+Total Examples : 7
+Exact Match    : 28.57%
+F1 Score       : 47.38%
+==================================================
+```
+
+*Note: Exact numbers vary slightly due to training randomness.*
+
+---
+
+## API Usage
+
+You can interact with the model programmatically via the REST API:
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/answer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "passage": "Berlin is the capital of Germany.",
+    "question": "What is the capital of Germany?"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "answer": "Berlin",
+  "confidence": 0.8421,
+  "start": 0,
+  "end": 6,
+  "model_params": 1795642
+}
+```
+
+---
+
+## Testing
+
+Run unit tests with:
+
+```bash
+python tests/test_evaluate.py
+```
+
+Tests cover:
+- Text normalization
+- Exact Match and F1-score computation
+- Sliding-window chunking logic
+- End-to-end prediction evaluation
+
+---
+
+## Key Design Decisions
+
+1. **Custom Micro Architecture:** We intentionally scaled BERT down to ~1.8M parameters to demonstrate that transformer-based QA can work with tiny models, making inference fast and deployment lightweight.
+
+2. **Token-Based Chunking:** We tokenize once and chunk by token IDs rather than raw characters. This prevents breaking words in the middle and keeps chunks aligned with the model's expectations.
+
+3. **Answer Selection Heuristic:** When multiple chunks produce answers, we rank by confidence score, penalize empty strings, and slightly prefer shorter spans to reduce noise.
+
+4. **Character Offset Mapping:** Predicted spans are mapped back to the original passage coordinates so the web UI can accurately highlight the answer in context.
+
+5. **Lazy Model Loading:** The model is loaded on the first request in the Flask app, preventing long startup times during development.
+
+---
+
+## Future Work
+
+- **SQuAD 2.0 Support:** Extend to handle unanswerable questions with a confidence threshold.
+- **Knowledge Distillation:** Distill a larger teacher model into Micro-BERT for better accuracy.
+- **Retrieval-Augmented QA:** Connect to a document retriever for open-domain QA.
+- **Domain Adaptation:** Fine-tune on medical or legal corpora for specialized applications.
+- **Multi-lingual Support:** Swap the tokenizer and vocab for mBERT-style cross-lingual QA.
+
+---
+
+## References
+
+1. Devlin, J., Chang, M., Lee, K., & Toutanova, K. (2019). [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://aclanthology.org/N19-1423/). *NAACL*.
+2. Rajpurkar, P., Zhang, J., Lopyrev, K., & Liang, P. (2016). [SQuAD: 100,000+ Questions for Machine Comprehension of Text](https://aclanthology.org/D16-1264/). *EMNLP*.
+3. [Hugging Face Transformers](https://huggingface.co/docs/transformers)
+4. Turc, I., et al. (2019). [Well-Read Students Learn Better: On the Importance of Pre-training Compact Models](https://arxiv.org/abs/1908.08962). *arXiv*.
+
+---
+
+## Google Colab (Fastest Option)
+
+The easiest way to train is on **Google Colab's free Tesla T4 GPU**:
+
+| Hardware | Full SQuAD (3 epochs) | Sample Data (200 epochs) |
+|----------|----------------------|--------------------------|
+| Your Laptop (CPU) | ~2 hours | ~3 minutes |
+| Hostinger VPS KVM 4 (CPU) | ~2 hours | ~3 minutes |
+| **Google Colab T4 (GPU)** | **~5–8 minutes** | **~30 seconds** |
+
+📓 **Ready-to-use notebook:** [`colab/Micro_BERT_QA_Training.ipynb`](colab/Micro_BERT_QA_Training.ipynb)
+
+Upload this notebook to [colab.research.google.com](https://colab.research.google.com), select **Runtime → Change runtime type → GPU**, and run all cells.
+
+## Deployment
+
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for a complete guide to deploying this project on a **Hostinger VPS** (or any Ubuntu server), including:
+- Recommended VPS plans and OS selection
+- Step-by-step server setup
+- Production deployment with Gunicorn + Nginx
+- systemd service configuration
+- HTTPS with Let's Encrypt
+
+---
+
+## License
+
+This project is for academic purposes. The underlying BERT architecture is subject to the [Apache 2.0 License](https://github.com/google-research/bert/blob/master/LICENSE).

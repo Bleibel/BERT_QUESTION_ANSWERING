@@ -1,4 +1,24 @@
-flask
-torch
-transformers
-python-dotenv
+# Core dependencies for BERT Question Answering Project
+# Compatible with Python 3.8+
+
+# Web framework
+flask>=2.0.0
+
+# Deep Learning
+torch>=2.0.0
+
+# Transformers library (Hugging Face)
+transformers>=4.30.0
+
+# Datasets library (for loading SQuAD and other datasets)
+datasets>=2.14.0
+
+# Training utilities
+accelerate>=0.20.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Optional: for running Jupyter notebooks (analysis)
+# jupyter>=1.0.0
+# matplotlib>=3.7.0
