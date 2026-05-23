@@ -16,6 +16,33 @@ from src.utils import find_best_answer
 from src.micro_bert import get_micro_bert_config, count_parameters
 
 
+class ValueHead(torch.nn.Module):
+    """Critic value head for PPO RL training.
+
+    Estimates the expected reward (value) of a given (question, passage) state
+    by processing the [CLS] token representation.
+    """
+
+    def __init__(self, hidden_size: int, dropout: float = 0.1):
+        super().__init__()
+        self.dropout = torch.nn.Dropout(dropout)
+        self.dense = torch.nn.Linear(hidden_size, 1)
+
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        """Return scalar value estimate for each example in batch.
+
+        Args:
+            hidden_states: [batch_size, seq_len, hidden_size]
+
+        Returns:
+            values: [batch_size]
+        """
+        cls_token = hidden_states[:, 0]  # [CLS]
+        cls_token = self.dropout(cls_token)
+        value = self.dense(cls_token).squeeze(-1)
+        return value
+
+
 DEFAULT_MICRO_CHECKPOINT = "checkpoints/micro-bert-qa"
 FALLBACK_MODEL = "bert-large-uncased-whole-word-masking-finetuned-squad"
 
