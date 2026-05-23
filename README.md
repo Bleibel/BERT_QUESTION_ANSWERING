@@ -279,6 +279,33 @@ Tests cover:
 
 ---
 
+## Reinforcement Learning Extension
+
+This project includes a **REINFORCE-based RL training pipeline** (`train_rl.py`) that fine-tunes the model using reward signals instead of ground-truth labels.
+
+**Why RL?** Standard training optimizes token-level cross-entropy, but we actually care about F1/Exact Match. RL directly optimizes the evaluation metric.
+
+**Algorithm:** REINFORCE with baseline  
+**Reward:** `0.5 × EM + 0.5 × F1`  
+**Use case:** Second-stage fine-tuning after supervised pre-training
+
+```bash
+# Step 1: Supervised pre-training
+python train.py --epochs 200 --batch_size 4 --learning_rate 1e-3
+
+# Step 2: RL fine-tuning
+python train_rl.py \
+  --checkpoint checkpoints/micro-bert-qa \
+  --dataset data/sample_squad.json \
+  --epochs 20 \
+  --batch_size 4 \
+  --learning_rate 1e-5
+```
+
+See [`docs/REINFORCEMENT_LEARNING.md`](docs/REINFORCEMENT_LEARNING.md) for the full theory, reward design, and extension ideas (PPO, SCST, RLHF).
+
+---
+
 ## Future Work
 
 - **SQuAD 2.0 Support:** Extend to handle unanswerable questions with a confidence threshold.
