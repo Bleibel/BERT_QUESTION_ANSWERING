@@ -68,7 +68,7 @@ def load_squad_dataset(split="train"):
         sys.exit(1)
 
     print(f"Downloading SQuAD 1.1 ({split})...")
-    dataset = load_dataset("squad", split=split)
+    dataset = load_dataset("rajpurkar/squad", split=split)
     return dataset
 
 

@@ -51,20 +51,6 @@
                         </div>
 
                         <form method="POST" action="/" class="qa-form">
-                            <div class="form-group">
-                                <label for="passage">
-                                    Context Passage
-                                    <span class="hint">Paste any paragraph or article here</span>
-                                </label>
-                                <textarea
-                                    name="passage"
-                                    id="passage"
-                                    rows="8"
-                                    placeholder="Enter your passage here..."
-                                    required
-                                >{{ request.form.get("passage", "") }}</textarea>
-                            </div>
-
                             <div class="form-row">
                                 <div class="form-group flex-2">
                                     <label for="question">
@@ -133,20 +119,7 @@
                             </div>
                         </div>
 
-                        {% if highlighted_passage %}
-                        <div class="result-card">
-                            <div class="result-header">
-                                <h3>Answer in Context</h3>
-                            </div>
-                            <div class="context-box">
-                                <p>
-                                    {{ highlighted_passage[0] }}
-                                    <mark>{{ highlighted_passage[1] }}</mark>
-                                    {{ highlighted_passage[2] }}
-                                </p>
-                            </div>
-                        </div>
-                        {% endif %}
+
                         {% endif %}
                     </div>
                 </div>

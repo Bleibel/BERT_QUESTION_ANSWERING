@@ -587,7 +587,7 @@ def main():
     # Load dataset
     if args.dataset.lower() == "squad":
         from datasets import load_dataset
-        raw = load_dataset("squad", split="train")
+        raw = load_dataset("rajpurkar/squad", split="train")
         dataset = []
         for ex in raw:
             dataset.append({

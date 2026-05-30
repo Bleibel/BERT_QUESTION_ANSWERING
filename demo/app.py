@@ -36,15 +36,21 @@ def index():
         "model_info": None,
     }
 
+    DEFAULT_PASSAGE = (
+        "Berlin is the capital and largest city of Germany by both area and population. "
+        "Its 3.7 million inhabitants make it the European Union's most populous city, "
+        "according to population within city limits. The city is also one of Germany's 16 "
+        "federal states. It is surrounded by the state of Brandenburg, and contiguous with "
+        "Potsdam, Brandenburg's capital. Berlin's urban area has a population of around 4.5 "
+        "million and is the second most populous urban area in Germany after the Ruhr."
+    )
+
     if request.method == "POST":
-        passage = request.form.get("passage", "").strip()
+        passage = DEFAULT_PASSAGE
         question = request.form.get("question", "").strip()
         chunk_size = request.form.get("chunk_size", "384")
         stride = request.form.get("stride", "128")
 
-        if not passage:
-            context["error"] = "Please enter a passage."
-            return render_template("index.html", **context)
         if not question:
             context["error"] = "Please enter a question."
             return render_template("index.html", **context)
@@ -80,14 +86,7 @@ def index():
             context["answer"] = answer
             context["confidence"] = f"{score:.4f}"
 
-            # Highlight answer in passage
-            if 0 <= start_idx < len(passage) and 0 <= end_idx <= len(passage):
-                before = passage[:start_idx]
-                highlight = passage[start_idx:end_idx]
-                after = passage[end_idx:]
-                context["highlighted_passage"] = (before, highlight, after)
-            else:
-                context["highlighted_passage"] = (passage, "", "")
+
         else:
             context["error"] = "No answer found. Try rephrasing your question."
 

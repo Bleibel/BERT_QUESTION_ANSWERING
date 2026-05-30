@@ -172,7 +172,10 @@ class BERTQA:
         end_logits_masked[~valid_mask] = -1e9
 
         # Greedy approach: pick top-k starts and check corresponding ends
-        top_k = 20
+        num_valid = valid_mask.sum().item()
+        if num_valid == 0:
+            return None
+        top_k = min(20, num_valid)
         top_start_indices = torch.topk(start_logits_masked, top_k).indices.tolist()
 
         for start_idx in top_start_indices:
