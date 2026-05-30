@@ -14,7 +14,7 @@ import time
 
 from src.model import BERTQA
 from src.evaluate import evaluate_predictions, print_metrics
-from src.dataset import load_squad_data, get_sample_dataset, save_predictions
+from src.dataset import load_squad_data, load_squad_data_hf, get_sample_dataset, save_predictions
 
 
 def main():
@@ -72,7 +72,10 @@ def main():
     args = parser.parse_args()
 
     # Load dataset
-    if args.dataset:
+    if args.dataset == "squad":
+        print("Loading SQuAD validation set from HuggingFace...")
+        examples = load_squad_data_hf(split="validation", max_examples=args.max_examples)
+    elif args.dataset:
         print(f"Loading dataset from {args.dataset}...")
         examples = load_squad_data(args.dataset)
     else:

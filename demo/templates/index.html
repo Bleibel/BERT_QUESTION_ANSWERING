@@ -29,8 +29,8 @@
                 <div class="container">
                     <h1>Question Answering with <span class="accent">Micro-BERT</span></h1>
                     <p class="subtitle">
-                        A 1.8-million parameter transformer fine-tuned for extractive QA.
-                        Ask a question about any passage and watch the model pinpoint the answer span.
+                        A ~10-million parameter transformer fine-tuned for extractive QA.
+                        Ask a question about the passage and watch the model pinpoint the answer span.
                     </p>
                     {% if model_info %}
                     <div class="model-badge">
@@ -53,6 +53,19 @@
                         <form method="POST" action="/" class="qa-form">
                             <div class="form-row">
                                 <div class="form-group flex-2">
+                                    <label for="model_name">
+                                        Model Checkpoint
+                                        <span class="hint">Select active model checkpoint</span>
+                                    </label>
+                                    <select name="model_name" id="model_name" style="width: 100%; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 8px; font-family: inherit; font-size: 0.95rem; color: var(--color-text); background: var(--color-surface);">
+                                        {% for checkpoint in available_checkpoints %}
+                                        <option value="{{ checkpoint.path }}" {% if selected_checkpoint == checkpoint.path %}selected{% endif %}>
+                                            {{ checkpoint.name }} {% if checkpoint.is_micro %}(Micro-BERT){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group flex-2">
                                     <label for="question">
                                         Question
                                         <span class="hint">Ask something answerable from the passage</span>
@@ -66,6 +79,9 @@
                                         required
                                     />
                                 </div>
+                            </div>
+
+                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="chunk_size">Chunk Size</label>
                                     <input
@@ -119,7 +135,6 @@
                             </div>
                         </div>
 
-
                         {% endif %}
                     </div>
                 </div>
@@ -160,11 +175,11 @@
                         <p>
                             This project implements an <strong>extractive question-answering system</strong> for a university NLP course.
                             Instead of using a 340M-parameter BERT-large model, we designed and trained a custom <strong>Micro-BERT</strong>
-                            with only <strong>~1.8 million parameters</strong>.
+                            with only <strong>~10 million parameters</strong>.
                         </p>
                         <ul>
-                            <li><strong>Model:</strong> Custom Micro-BERT (2 layers, 56 hidden, 2 heads)</li>
-                            <li><strong>Parameters:</strong> ~1,795,642 (0.5% of BERT-large)</li>
+                            <li><strong>Model:</strong> Custom Micro-BERT (4 layers, 256 hidden, 4 heads)</li>
+                            <li><strong>Parameters:</strong> ~10,120,450 (3% of BERT-large)</li>
                             <li><strong>Dataset:</strong> SQuAD 1.1 (Stanford Question Answering Dataset)</li>
                             <li><strong>Metrics:</strong> Exact Match (EM) and F1-score</li>
                             <li><strong>Features:</strong> Sliding-window chunking, confidence scoring, REST API, training pipeline</li>
@@ -180,7 +195,7 @@
 
         <footer class="site-footer">
             <div class="container">
-                <p>NLP Course Project &mdash; Question Answering using a 1.8M Micro-BERT</p>
+                <p>NLP Course Project &mdash; Question Answering using a ~10M Micro-BERT</p>
             </div>
         </footer>
     </div>

@@ -12,15 +12,16 @@ adapted for extractive question answering:
 
 Usage:
     # 1. Train supervised checkpoint first
-    python train.py --epochs 200 --batch_size 4 --learning_rate 1e-3
+    python train.py --dataset squad --epochs 10 --batch_size 32 --fp16 --device 0
 
     # 2. PPO fine-tuning
     python train_ppo.py \
         --actor checkpoints/micro-bert-qa \
-        --dataset data/sample_squad.json \
-        --epochs 50 \
+        --dataset squad \
+        --epochs 5 \
         --rollout_size 32 \
-        --ppo_epochs 4
+        --ppo_epochs 4 \
+        --device 0
 
 References:
     - Schulman et al. (2017). Proximal Policy Optimization Algorithms.
@@ -64,13 +65,19 @@ class RolloutBuffer(NamedTuple):
     predictions: List[str]
 
 
-def compute_f1_reward(predictions: List[str], references: List[str]) -> torch.Tensor:
-    """Compute F1-based rewards for a batch."""
+def compute_f1_reward(predictions: List[str], references: List[str], length_penalty_coeff: float = 0.002) -> torch.Tensor:
+    """Compute F1-based rewards with length penalty for a batch."""
     rewards = []
     for pred, ref in zip(predictions, references):
         em = exact_match_score(pred, ref)
         f1 = f1_score(pred, ref)
-        reward = 0.5 * em + 0.5 * f1
+        
+        # Length penalty to discourage verbose or spanning predictions
+        word_count = len(pred.split())
+        penalty = length_penalty_coeff * word_count
+        
+        reward = 0.5 * em + 0.5 * f1 - penalty
+        reward = max(-0.2, reward)  # Clamp lower bound
         rewards.append(reward)
     return torch.tensor(rewards, dtype=torch.float32)
 
@@ -518,12 +525,12 @@ def train_ppo(
         if avg_reward > best_avg_reward:
             best_avg_reward = avg_reward
             actor.save_pretrained(os.path.join(output_dir, "best_actor"))
-            critic.save_pretrained(os.path.join(output_dir, "best_critic"))
+            torch.save(critic.state_dict(), os.path.join(output_dir, "best_actor", "pytorch_model_critic.bin"))
             tokenizer.save_pretrained(os.path.join(output_dir, "best_actor"))
 
     # === SAVE FINAL ===
     actor.save_pretrained(os.path.join(output_dir, "final_actor"))
-    critic.save_pretrained(os.path.join(output_dir, "final_critic"))
+    torch.save(critic.state_dict(), os.path.join(output_dir, "final_actor", "pytorch_model_critic.bin"))
     tokenizer.save_pretrained(os.path.join(output_dir, "final_actor"))
 
     meta = {
@@ -571,6 +578,10 @@ def main():
 
     # Create critic (value head)
     critic = ValueHead(hidden_size=actor.config.hidden_size)
+    critic_path = os.path.join(args.actor, "pytorch_model_critic.bin")
+    if os.path.exists(critic_path):
+        print(f"Loading critic state dict from: {critic_path}")
+        critic.load_state_dict(torch.load(critic_path, map_location=device))
 
     # Create reference actor (frozen copy for KL penalty)
     if not args.no_reference_kl:

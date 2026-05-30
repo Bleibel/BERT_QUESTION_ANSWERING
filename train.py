@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Fine-tune a custom Micro-BERT for extractive Question Answering.
 
-This script trains our ~1.8M-parameter Micro-BERT on SQuAD-format data
+This script trains our ~10M-parameter Micro-BERT on SQuAD-format data
 using the Hugging Face Trainer API.
 
 Quick start (sample data, CPU, ~30 seconds):
     python train.py
 
-Train on full SQuAD 1.1 (CPU, ~20-40 minutes):
-    python train.py --dataset squad --epochs 2 --batch_size 8
+Train on full SQuAD 1.1 (GPU, ~20-30 minutes):
+    python train.py --dataset squad --epochs 10 --batch_size 32 --fp16 --device 0
 
 Train on custom JSON:
     python train.py --dataset data/sample_squad.json --epochs 5
@@ -194,6 +194,17 @@ def main():
         default=42,
         help="Random seed",
     )
+    parser.add_argument(
+        "--fp16",
+        action="store_true",
+        help="Enable mixed-precision (FP16) training on CUDA",
+    )
+    parser.add_argument(
+        "--device",
+        type=int,
+        default=-1,
+        help="Device for training (-1 for CPU, 0+ for GPU)",
+    )
     args = parser.parse_args()
 
     # Setup
@@ -257,11 +268,12 @@ def main():
         learning_rate=args.learning_rate,
         weight_decay=0.01,
         warmup_steps=max(1, int(0.1 * len(tokenized_dataset) / args.batch_size)),
-        # logging_dir deprecated in v5.2; logs go to output_dir/logs by default
         logging_steps=5,
         save_strategy="epoch",
         seed=args.seed,
         report_to="none",
+        fp16=args.fp16,
+        no_cuda=(args.device < 0),
     )
 
     trainer = Trainer(

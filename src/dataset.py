@@ -5,6 +5,38 @@ import random
 from typing import Dict, List
 
 
+def load_squad_data_hf(split: str = "validation", max_examples: int = None) -> List[dict]:
+    """Load SQuAD data from HuggingFace datasets.
+
+    Returns a flat list of examples, each with keys:
+        id, title, context, question, answer_text, answer_start
+    """
+    try:
+        from datasets import load_dataset
+    except ImportError as e:
+        raise ImportError("datasets library required. Install: pip install datasets") from e
+
+    dataset = load_dataset("rajpurkar/squad", split=split)
+    examples = []
+    for item in dataset:
+        answers = item.get("answers", {})
+        texts = answers.get("text", [])
+        starts = answers.get("answer_start", [])
+        if not texts:
+            continue
+        examples.append({
+            "id": item["id"],
+            "title": item.get("title", ""),
+            "context": item["context"],
+            "question": item["question"],
+            "answer_text": texts[0],
+            "answer_start": starts[0] if starts else -1,
+        })
+        if max_examples and len(examples) >= max_examples:
+            break
+    return examples
+
+
 def load_squad_data(file_path: str) -> List[dict]:
     """Load SQuAD v1.1 or v2.0 JSON data.
 

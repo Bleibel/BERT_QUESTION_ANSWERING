@@ -1,14 +1,14 @@
-# Question Answering using a 1.8M Micro-BERT
+# Question Answering using a ~10M Micro-BERT
 
 > **NLP Course Project** | Extractive Reading Comprehension with a Custom Tiny Transformer
 
-This project implements a complete, end-to-end **extractive Question Answering (QA)** system using a custom-designed **Micro-BERT** transformer. With only **~1.8 million parameters**, it is roughly **200× smaller** than BERT-large, yet still capable of identifying precise answer spans in a given passage.
+This project implements a complete, end-to-end **extractive Question Answering (QA)** system using a custom-designed **Micro-BERT** transformer. With **~10 million parameters**, it is roughly **30× smaller** than BERT-large, yet still capable of identifying precise answer spans in a given passage.
 
 ---
 
 ## Features
 
-- **Custom Micro-BERT Architecture:** A hand-tuned transformer with 2 layers, 56 hidden dims, and 2 attention heads (~1.8M params).
+- **Custom Micro-BERT Architecture:** A hand-tuned transformer with 4 layers, 256 hidden dims, and 4 attention heads (~10M params).
 - **Complete Training Pipeline:** Fine-tune from scratch on SQuAD-format data using Hugging Face `Trainer`.
 - **Sliding-Window Chunking:** Handles passages of any length by processing overlapping chunks with configurable stride.
 - **Robust Evaluation:** Implements standard SQuAD metrics — **Exact Match (EM)** and **F1-score**.
@@ -42,7 +42,7 @@ This fine-tunes the model on the built-in 7-example dataset and saves a checkpoi
 To train on the full SQuAD 1.1 dataset (~20–40 min on CPU):
 
 ```bash
-python train.py --dataset squad --epochs 2 --batch_size 8
+python train.py --dataset squad --epochs 10 --batch_size 32 --fp16 --device 0
 ```
 
 ### 3. Run Evaluation
@@ -66,18 +66,21 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 ```
 BERT-Question-Answering-Project/
 │
-├── app.py                      # Entry-point launcher for the web demo
-├── train.py                    # Fine-tuning script for Micro-BERT
+├── train.py                    # Supervised fine-tuning for Micro-BERT
+├── train_distillation.py       # Knowledge distillation from teacher BERT
+├── train_rl.py                 # REINFORCE policy gradient training
+├── train_ppo.py                # PPO + self-critical baseline training
 ├── run_evaluation.py           # CLI script for batch evaluation
 ├── requirements.txt            # Python dependencies
+├── TRAINING.md                 # Complete 3-stage training pipeline guide
 │
 ├── src/                        # Core library
 │   ├── __init__.py
-│   ├── micro_bert.py           # Custom ~1.8M-parameter BERT config
+│   ├── micro_bert.py           # Custom ~10M-parameter BERT config
 │   ├── model.py                # BERTQA wrapper with sliding-window logic
 │   ├── evaluate.py             # EM & F1 metrics
 │   ├── utils.py                # Text normalization & chunking utilities
-│   └── dataset.py              # SQuAD loader & built-in sample data
+│   └── dataset.py              # SQuAD loader (HF + built-in sample data)
 │
 ├── demo/                       # Web application
 │   ├── app.py                  # Flask routes (UI + API)
@@ -90,11 +93,11 @@ BERT-Question-Answering-Project/
 ├── tests/
 │   └── test_evaluate.py        # Unit tests for metrics & utilities
 │
-├── data/
-│   └── sample_squad.json       # Small SQuAD-format dataset for testing
-│
 ├── docs/
-│   └── REPORT.md               # Full academic project report
+│   ├── REPORT.md               # Full academic project report
+│   ├── REINFORCEMENT_LEARNING.md
+│   ├── ADVANCED_RL.md
+│   └── PRESENTATION.md
 │
 ├── checkpoints/                # Saved model checkpoints (auto-generated)
 │   └── micro-bert-qa/
@@ -111,17 +114,17 @@ BERT-Question-Answering-Project/
 
 ## Model Architecture
 
-### Micro-BERT (~1.8M parameters)
+### Micro-BERT (~10M parameters)
 
 | Component | Value |
 |-----------|-------|
-| Hidden Size | 56 |
-| Layers | 2 |
-| Attention Heads | 2 |
-| Intermediate (FFN) | 128 |
+| Hidden Size | 256 |
+| Layers | 4 |
+| Attention Heads | 4 |
+| Intermediate (FFN) | 512 |
 | Max Positions | 512 |
 | Vocabulary | 30,522 (WordPiece) |
-| **Total Parameters** | **~1,795,642** |
+| **Total Parameters** | **~10,120,450** |
 
 ### Architecture Flow
 
@@ -136,7 +139,7 @@ Question + Passage
        |
        v
    Micro-BERT Encoder
-   (2 layers, 56 hidden dim, 2 heads)
+   (4 layers, 256 hidden dim, 4 heads)
        |
    +--------+--------+
    |                 |
@@ -243,7 +246,7 @@ curl -X POST http://127.0.0.1:5000/api/answer \
   "confidence": 0.8421,
   "start": 0,
   "end": 6,
-  "model_params": 1795642
+  "model_params": 10120450
 }
 ```
 
@@ -267,7 +270,7 @@ Tests cover:
 
 ## Key Design Decisions
 
-1. **Custom Micro Architecture:** We intentionally scaled BERT down to ~1.8M parameters to demonstrate that transformer-based QA can work with tiny models, making inference fast and deployment lightweight.
+1. **Custom Micro Architecture:** We scaled BERT down to ~10M parameters — small enough for fast inference and lightweight deployment, but large enough to learn meaningful representations on SQuAD.
 
 2. **Token-Based Chunking:** We tokenize once and chunk by token IDs rather than raw characters. This prevents breaking words in the middle and keeps chunks aligned with the model's expectations.
 
@@ -294,22 +297,36 @@ python train_rl.py --checkpoint checkpoints/micro-bert-qa --epochs 20
 **Algorithm:** REINFORCE with running-average baseline  
 **Reward:** `0.5 × EM + 0.5 × F1`
 
-### 2. PPO + Self-Critical Baseline ⭐ (The Impressive One)
+### Knowledge Distillation
+
+`train_distillation.py` — Distill from a large teacher (e.g., BERT-base) into Micro-BERT using soft logit matching.
+
+```bash
+python train_distillation.py \
+    --dataset squad \
+    --teacher_model csarron/bert-base-uncased-squad-v1 \
+    --epochs 5 \
+    --batch_size 16 \
+    --fp16 \
+    --device 0
+```
+
+### PPO + Self-Critical Baseline ⭐
 
 `train_ppo.py` — **Proximal Policy Optimization**, the same algorithm behind ChatGPT's RLHF.
 
 ```bash
 # Step 1: Supervised pre-training
-python train.py --epochs 200 --batch_size 4 --learning_rate 1e-3
+python train.py --dataset squad --epochs 10 --batch_size 32 --fp16 --device 0
 
 # Step 2: PPO fine-tuning
 python train_ppo.py \
   --actor checkpoints/micro-bert-qa \
-  --dataset data/sample_squad.json \
-  --epochs 50 \
-  --rollout_size 16 \
+  --dataset squad \
+  --epochs 5 \
+  --rollout_size 32 \
   --ppo_epochs 4 \
-  --learning_rate 5e-6
+  --device 0
 ```
 
 **What's inside:**
@@ -337,7 +354,7 @@ python train_ppo.py \
 ## Future Work
 
 - **SQuAD 2.0 Support:** Extend to handle unanswerable questions with a confidence threshold.
-- **Knowledge Distillation:** Distill a larger teacher model into Micro-BERT for better accuracy.
+- **Retrieval-Augmented QA:** Connect to a document retriever for open-domain QA.
 - **Retrieval-Augmented QA:** Connect to a document retriever for open-domain QA.
 - **Domain Adaptation:** Fine-tune on medical or legal corpora for specialized applications.
 - **Multi-lingual Support:** Swap the tokenizer and vocab for mBERT-style cross-lingual QA.
@@ -357,24 +374,14 @@ python train_ppo.py \
 
 The easiest way to train is on **Google Colab's free Tesla T4 GPU**:
 
-| Hardware | Full SQuAD (3 epochs) | Sample Data (200 epochs) |
-|----------|----------------------|--------------------------|
-| Your Laptop (CPU) | ~2 hours | ~3 minutes |
-| Hostinger VPS KVM 4 (CPU) | ~2 hours | ~3 minutes |
-| **Google Colab T4 (GPU)** | **~5–8 minutes** | **~30 seconds** |
+| Hardware | Full SQuAD (10 epochs) |
+|----------|------------------------|
+| Your Laptop (CPU) | ~2–3 hours |
+| **Google Colab T4 (GPU)** | **~25–35 minutes** |
 
 📓 **Ready-to-use notebook:** [`colab/Micro_BERT_QA_Training.ipynb`](colab/Micro_BERT_QA_Training.ipynb)
 
 Upload this notebook to [colab.research.google.com](https://colab.research.google.com), select **Runtime → Change runtime type → GPU**, and run all cells.
-
-## Deployment
-
-See [`DEPLOYMENT.md`](DEPLOYMENT.md) for a complete guide to deploying this project on a **Hostinger VPS** (or any Ubuntu server), including:
-- Recommended VPS plans and OS selection
-- Step-by-step server setup
-- Production deployment with Gunicorn + Nginx
-- systemd service configuration
-- HTTPS with Let's Encrypt
 
 ---
 

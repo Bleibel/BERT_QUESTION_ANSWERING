@@ -5,7 +5,7 @@ This script implements REINFORCE to fine-tune the QA model using
 reward signals (F1, EM) rather than ground-truth labels.
 
 Usage:
-    python train_rl.py --checkpoint checkpoints/micro-bert-qa --epochs 10
+    python train_rl.py --checkpoint checkpoints/micro-bert-qa --dataset squad --epochs 5 --device 0
 
 Requirements:
     - A pre-trained or supervised checkpoint to start from
@@ -29,17 +29,22 @@ from src.evaluate import exact_match_score, f1_score
 from src.micro_bert import count_parameters
 
 
-def compute_rewards(predictions: List[str], references: List[str]) -> torch.Tensor:
+def compute_rewards(predictions: List[str], references: List[str], length_penalty_coeff: float = 0.002) -> torch.Tensor:
     """Compute rewards for a batch of predictions.
 
-    Default: combined reward = 0.5 * EM + 0.5 * F1
+    Default: combined reward = 0.5 * EM + 0.5 * F1 - length_penalty
     """
     rewards = []
     for pred, ref in zip(predictions, references):
         em = exact_match_score(pred, ref)
         f1 = f1_score(pred, ref)
-        # Combined reward with small length penalty to avoid spurious spans
-        reward = 0.5 * em + 0.5 * f1
+        
+        # Length penalty to keep answer spans concise
+        word_count = len(pred.split())
+        penalty = length_penalty_coeff * word_count
+        
+        reward = 0.5 * em + 0.5 * f1 - penalty
+        reward = max(-0.2, reward)  # Clamp lower bound
         rewards.append(reward)
     return torch.tensor(rewards, dtype=torch.float32)
 

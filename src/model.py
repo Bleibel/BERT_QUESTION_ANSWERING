@@ -44,7 +44,6 @@ class ValueHead(torch.nn.Module):
 
 
 DEFAULT_MICRO_CHECKPOINT = "checkpoints/micro-bert-qa"
-FALLBACK_MODEL = "bert-large-uncased-whole-word-masking-finetuned-squad"
 
 
 class BERTQA:
@@ -55,42 +54,47 @@ class BERTQA:
         model_name: Optional[str] = None,
         device: int = -1,
         max_answer_length: int = 100,
+        null_threshold: float = 0.15,
     ):
         """Initialize the QA pipeline.
 
         Args:
-            model_name: Hugging Face model id or local path. If None, tries
-                        the Micro-BERT checkpoint, then falls back to the
-                        large BERT SQuAD model.
+            model_name: Hugging Face model id or local path. If None, uses
+                        the Micro-BERT checkpoint.
             device: -1 for CPU, >=0 for GPU device id.
             max_answer_length: Maximum length of extracted answer span.
+            null_threshold: Confidence threshold below which answers are marked unanswerable.
         """
         self.device = torch.device("cpu" if device < 0 else f"cuda:{device}")
         self.max_answer_length = max_answer_length
+        self.null_threshold = null_threshold
 
         # Resolve model path
         if model_name is None:
-            has_checkpoint = (
-                os.path.isdir(DEFAULT_MICRO_CHECKPOINT)
-                and (
-                    os.path.exists(os.path.join(DEFAULT_MICRO_CHECKPOINT, "pytorch_model.bin"))
-                    or os.path.exists(os.path.join(DEFAULT_MICRO_CHECKPOINT, "model.safetensors"))
-                )
-            )
-            if has_checkpoint:
-                model_name = DEFAULT_MICRO_CHECKPOINT
-                self.is_micro = True
-            else:
-                model_name = FALLBACK_MODEL
-                self.is_micro = False
+            model_name = DEFAULT_MICRO_CHECKPOINT
+            self.is_micro = True
         else:
-            self.is_micro = "micro-bert" in model_name.lower()
+            self.is_micro = "micro-bert" in model_name.lower() or "micro" in model_name.lower()
 
         self.model_name = model_name
 
         # Load tokenizer and model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForQuestionAnswering.from_pretrained(model_name)
+        
+        # FlashAttention (SDPA) integration
+        kwargs = {}
+        if self.device.type == "cuda":
+            try:
+                # attn_implementation="sdpa" requires newer transformers package
+                kwargs["attn_implementation"] = "sdpa"
+                self.model = AutoModelForQuestionAnswering.from_pretrained(model_name, **kwargs)
+                print("[BERTQA] Enabled FlashAttention (SDPA) successfully.")
+            except Exception:
+                # Fallback
+                self.model = AutoModelForQuestionAnswering.from_pretrained(model_name)
+        else:
+            self.model = AutoModelForQuestionAnswering.from_pretrained(model_name)
+            
         self.model.to(self.device)
         self.model.eval()
 
@@ -225,6 +229,14 @@ class BERTQA:
         start_conf = start_probs[best_start].item()
         end_conf = end_probs[best_end].item()
         confidence = (start_conf + end_conf) / 2.0
+
+        if confidence < self.null_threshold:
+            return {
+                "answer": "",
+                "score": confidence,
+                "start": 0,
+                "end": 0,
+            }
 
         return {
             "answer": answer_text,

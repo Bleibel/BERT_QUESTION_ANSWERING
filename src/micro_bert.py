@@ -1,31 +1,32 @@
-"""Custom Micro-BERT configuration (~1.8M parameters).
+"""Custom Micro-BERT configuration (~10M parameters).
 
-This module defines a drastically scaled-down BERT architecture suitable
-for educational purposes and lightweight deployments.
+This module defines a scaled-down BERT architecture with ~10M parameters,
+a ~5x increase from the original 1.8M version, for stronger QA performance
+while remaining lightweight.
 """
 
 from transformers import BertConfig
 
 
 def get_micro_bert_config() -> BertConfig:
-    """Return a ~1.8M-parameter BERT configuration.
+    """Return a ~10M-parameter BERT configuration.
 
     Architecture:
-        - 2 transformer layers
-        - 56 hidden dimensions
-        - 2 attention heads
-        - 128 intermediate (FFN) dimensions
+        - 4 transformer layers
+        - 256 hidden dimensions
+        - 4 attention heads
+        - 512 intermediate (FFN) dimensions
         - 512 max position embeddings
         - ~30522 WordPiece vocabulary
 
-    Total parameters: ~1,795,642
+    Total parameters: ~10,120,450
     """
     return BertConfig(
         vocab_size=30522,
-        hidden_size=56,
-        num_hidden_layers=2,
-        num_attention_heads=2,
-        intermediate_size=128,
+        hidden_size=256,
+        num_hidden_layers=4,
+        num_attention_heads=4,
+        intermediate_size=512,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
         attention_probs_dropout_prob=0.1,
