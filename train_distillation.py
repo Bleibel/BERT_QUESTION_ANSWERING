@@ -238,7 +238,6 @@ def main():
         seed=args.seed,
         report_to="none",
         fp16=args.fp16,
-        no_cuda=(args.device < 0),
     )
 
     # Run distillation trainer
