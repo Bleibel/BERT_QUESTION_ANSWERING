@@ -42,7 +42,7 @@ class DistillationTrainer(Trainer):
             self.teacher_model.to(self.args.device)
             self.teacher_model.eval()
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         """Override loss computation to incorporate soft distillation loss."""
         # 1. Forward pass on Student
         outputs_student = model(**inputs)

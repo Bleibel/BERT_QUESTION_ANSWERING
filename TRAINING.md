@@ -57,9 +57,27 @@ python train_distillation.py \
 
 ---
 
-## Stage 3: PPO Fine-tuning (Optional)
+## Stage 3: GRPO Fine-tuning (Optional, Recommended)
 
-Align the model with F1-based rewards using Proximal Policy Optimization.
+Align the model with F1-based rewards using **Group Relative Policy Optimization** — the same RL algorithm DeepSeek-R1 used.
+
+GRPO is simpler than PPO: it **removes the critic network** and uses the average reward of a sampled group as the baseline.
+
+```bash
+python train_grpo.py \
+    --checkpoint checkpoints/micro-bert-qa \
+    --dataset squad \
+    --epochs 5 \
+    --group_size 8 \
+    --device 0
+```
+
+**Expected boost:** +3–8% F1  
+**Output:** `checkpoints/micro-bert-qa-grpo`
+
+### Alternative: PPO Fine-tuning
+
+If you prefer the classic PPO with actor-critic:
 
 ```bash
 python train_ppo.py \
@@ -71,7 +89,6 @@ python train_ppo.py \
     --device 0
 ```
 
-**Expected boost:** +3–8% F1  
 **Output:** `checkpoints/micro-bert-qa-ppo`
 
 ---

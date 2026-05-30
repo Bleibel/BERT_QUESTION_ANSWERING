@@ -311,15 +311,33 @@ python train_distillation.py \
     --device 0
 ```
 
-### PPO + Self-Critical Baseline ⭐
+### GRPO ⭐ (DeepSeek-R1's Algorithm)
 
-`train_ppo.py` — **Proximal Policy Optimization**, the same algorithm behind ChatGPT's RLHF.
+`train_grpo.py` — **Group Relative Policy Optimization**. Removes the critic network entirely; uses group average reward as baseline. Same algorithm DeepSeek used for reasoning.
 
 ```bash
 # Step 1: Supervised pre-training
-python train.py --dataset squad --epochs 10 --batch_size 32 --fp16 --device 0
+python train.py --dataset squad --epochs 10 --batch_size 32 --fp16
 
-# Step 2: PPO fine-tuning
+# Step 2: GRPO fine-tuning
+python train_grpo.py \
+  --checkpoint checkpoints/micro-bert-qa \
+  --dataset squad \
+  --epochs 5 \
+  --group_size 8 \
+  --device 0
+```
+
+**Why GRPO over PPO:**
+- No critic network → lower memory, simpler code
+- Group baseline → more stable than learned value function
+- Perfect for small models on limited GPU memory
+
+### PPO + Self-Critical Baseline
+
+`train_ppo.py` — Classic **Proximal Policy Optimization** with actor-critic architecture.
+
+```bash
 python train_ppo.py \
   --actor checkpoints/micro-bert-qa \
   --dataset squad \
