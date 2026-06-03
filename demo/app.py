@@ -93,13 +93,18 @@ def index():
         "model_info": None,
         "available_checkpoints": available_checkpoints,
         "selected_checkpoint": selected_checkpoint,
+        "default_passage": DEFAULT_PASSAGE,
     }
 
     if request.method == "POST":
-        passage = DEFAULT_PASSAGE
+        passage = request.form.get("passage", DEFAULT_PASSAGE).strip()
         question = request.form.get("question", "").strip()
         chunk_size = request.form.get("chunk_size", "384")
         stride = request.form.get("stride", "128")
+
+        if not passage:
+            context["error"] = "Please enter a passage."
+            return render_template("index.html", **context)
 
         if not question:
             context["error"] = "Please enter a question."
