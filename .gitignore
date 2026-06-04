@@ -43,6 +43,11 @@ checkpoints/
 results/
 *.log
 
+# Large datasets (re-downloadable from HuggingFace)
+dataset.txt
+dataset_easy.json
+*.jsonl
+
 # Jupyter
 .ipynb_checkpoints/
 
