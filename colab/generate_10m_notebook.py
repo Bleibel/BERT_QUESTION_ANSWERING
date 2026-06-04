@@ -162,6 +162,9 @@ cells.append(markdown_cell(r"""
 | FP16 | Enabled |
 
 These are the project defaults. Adjust if needed.
+
+> ⚠️ **WARNING:** Colab will wipe your checkpoint if the runtime disconnects or restarts.
+> This cell now **auto-backs up to Google Drive** after training. Check your Drive for `micro-bert-10m-backup`.
 """))
 
 cells.append(code_cell(r"""
@@ -220,6 +223,20 @@ with open(os.path.join(OUTPUT_DIR, "training_metadata.json"), "w") as f:
     json.dump(meta, f, indent=2)
 
 print(f"\nCheckpoint saved to: {OUTPUT_DIR}")
+
+# === AUTO-BACKUP TO GOOGLE DRIVE ===
+# This prevents losing your checkpoint if Colab disconnects.
+# If Drive isn't mounted, it skips gracefully.
+try:
+    print("\nAttempting auto-backup to Google Drive...")
+    from google.colab import drive
+    drive.mount('/content/drive', force_remount=False)
+    DRIVE_BACKUP = "/content/drive/MyDrive/micro-bert-10m-backup"
+    !mkdir -p {DRIVE_BACKUP}
+    !cp -r {OUTPUT_DIR}/* {DRIVE_BACKUP}/
+    print(f"✅ Auto-backed up to: {DRIVE_BACKUP}")
+except Exception as e:
+    print(f"⚠️ Drive backup skipped (run Cell 10 manually): {e}")
 """))
 
 # ===== Evaluation =====
