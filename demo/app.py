@@ -60,10 +60,17 @@ def get_model(model_name=None):
     """Retrieve or initialize a cached model based on checkpoint path."""
     global _models
     
+    # Project root is parent of demo/ directory
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     # Resolve default path if None
     if model_name is None:
         model_name = "checkpoints/micro-bert-qa"
-
+    
+    # Convert relative checkpoint paths to absolute from project root
+    if not os.path.isabs(model_name) and model_name.startswith("checkpoints/"):
+        model_name = os.path.join(project_root, model_name)
+    
     if model_name not in _models:
         print(f"Loading BERTQA model checkpoint from: {model_name}...")
         _models[model_name] = BERTQA(model_name=model_name)
