@@ -231,6 +231,7 @@ Test the model on 1,000 validation examples.
 
 cells.append(code_cell(r"""
 # @title 8. Evaluate
+%cd /content/BERT_QUESTION_ANSWERING
 !python run_evaluation.py \
     --dataset squad \
     --model checkpoints/micro-bert-10m \
@@ -272,6 +273,7 @@ Keep your checkpoint permanently.
 
 cells.append(code_cell(r"""
 # @title 10. Save checkpoint to Drive
+%cd /content/BERT_QUESTION_ANSWERING
 from google.colab import drive
 drive.mount('/content/drive')
 
@@ -296,6 +298,7 @@ Run inference on any passage + question.
 
 cells.append(code_cell(r"""
 # @title 11. Test your model
+%cd /content/BERT_QUESTION_ANSWERING
 from src.model import BERTQA
 
 qa = BERTQA(model_name="checkpoints/micro-bert-10m", device=0 if torch.cuda.is_available() else -1)
