@@ -1,8 +1,8 @@
-# Project Report: Question Answering using a 1.8M Micro-BERT
+# Project Report: Question Answering using a ~10M Micro-BERT
 
 **Course:** Natural Language Processing  
 **Project Type:** Reading Comprehension / Extractive QA  
-**Model:** Custom Micro-BERT (~1.8M parameters)  
+**Model:** Custom Micro-BERT (~10.1M parameters)  
 
 ---
 
@@ -11,10 +11,10 @@
 Question Answering (QA) is a fundamental NLP task where a system reads a passage of text and answers a question based solely on the information contained in that passage. This project implements an **extractive QA system** using a **custom-designed Micro-BERT transformer**.
 
 ### 1.1 Motivation
-While large language models like BERT-large (340M parameters) achieve state-of-the-art results, they are computationally expensive and difficult to deploy in resource-constrained environments. This project explores the lower bound of transformer scale for extractive QA by designing, training, and evaluating a model with fewer than 2 million parameters.
+While large language models like BERT-large (340M parameters) achieve state-of-the-art results, they are computationally expensive and difficult to deploy in resource-constrained environments. This project explores efficient transformer scale for extractive QA by designing, training, and evaluating a compact model with approximately 10 million parameters—roughly 30× smaller than BERT-large while retaining meaningful QA capability.
 
 ### 1.2 Objectives
-- Design a custom BERT-like architecture scaled to ~1.8M parameters.
+- Design a custom BERT-like architecture scaled to ~10M parameters.
 - Implement a complete fine-tuning pipeline on the SQuAD dataset.
 - Evaluate the tiny model against standard QA metrics (EM, F1).
 - Provide an interactive web demo and reproducible training/evaluation scripts.
@@ -32,7 +32,7 @@ Several lines of research investigate smaller transformers:
 - **TinyBERT** (Jiao et al., 2020): 4M parameters via knowledge distillation.
 - **MobileBERT** (Sun et al., 2020): 4.3M parameters with inverted bottleneck design.
 
-Our Micro-BERT pushes this further to **~1.8M parameters**, smaller than any widely cited distilled model.
+Our Micro-BERT occupies a practical middle ground at **~10.1M parameters**—small enough for fast inference and deployment, yet large enough to learn meaningful representations on SQuAD without pre-training.
 
 ### 2.3 SQuAD
 The Stanford Question Answering Dataset (SQuAD 1.1) contains ~100k question-answer pairs on Wikipedia articles. Each answer is a contiguous span of text from the passage.
@@ -47,13 +47,13 @@ We define a custom `BertConfig` with the following hyperparameters:
 
 | Hyperparameter | Value |
 |----------------|-------|
-| `hidden_size` | 56 |
-| `num_hidden_layers` | 2 |
-| `num_attention_heads` | 2 |
-| `intermediate_size` | 128 |
+| `hidden_size` | 256 |
+| `num_hidden_layers` | 4 |
+| `num_attention_heads` | 4 |
+| `intermediate_size` | 512 |
 | `max_position_embeddings` | 512 |
 | `vocab_size` | 30,522 |
-| **Total Parameters** | **~1,793,266** |
+| **Total Parameters** | **~10,120,450** |
 
 The model uses standard BERT components (WordPiece embeddings, GELU activation, learned positional embeddings, pre-layer-norm is **not** used—we follow the original BERT post-layer-norm design).
 
@@ -67,7 +67,7 @@ Tokenizer (WordPiece) + [CLS] / [SEP]
   |
   v
 Micro-BERT Encoder
-(2 layers, 56 hidden, 2 heads, 128 intermediate)
+(4 layers, 256 hidden, 4 heads, 512 intermediate)
   |
   +---> Start Span Linear (56 -> 1)
   +---> End Span Linear   (56 -> 1)
@@ -96,8 +96,8 @@ We initialize Micro-BERT from scratch and fine-tune on SQuAD 1.1 using the Huggi
 **Hyperparameters:**
 - Optimizer: AdamW
 - Learning rate: 3e-5
-- Batch size: 2 (sample data) / 8 (full SQuAD)
-- Epochs: 10 (sample data) / 2 (full SQuAD)
+- Batch size: 2 (sample data) / 32 (full SQuAD)
+- Epochs: 10 (sample data) / 10 (full SQuAD)
 - Warmup ratio: 10%
 - Weight decay: 0.01
 - Max sequence length: 384
@@ -119,7 +119,7 @@ The final answer is selected by maximizing the confidence score. Empty answers a
 ```
 .
 ├── src/
-│   ├── micro_bert.py  # Custom ~1.8M BERT config
+│   ├── micro_bert.py  # Custom ~10M BERT config
 │   ├── model.py       # BERTQA wrapper with sliding-window logic
 │   ├── evaluate.py    # EM and F1 metrics
 │   ├── utils.py       # Text normalization and chunking
@@ -154,7 +154,7 @@ Running `python train.py` followed by `python run_evaluation.py` on the sample d
 |--------|-------|
 | Exact Match | 28.57% |
 | F1-Score | 47.38% |
-| Model Size | ~1.8M parameters |
+| Model Size | ~10.1M parameters |
 
 ### 5.4 Comparison with Baselines
 
@@ -163,7 +163,7 @@ Running `python train.py` followed by `python run_evaluation.py` on the sample d
 | BERT-large | 340M | 189× larger | Original SQuAD baseline |
 | DistilBERT | 66M | 37× larger | Popular compressed model |
 | TinyBERT | 4M | 2.2× larger | Distilled 4-layer model |
-| **Micro-BERT (ours)** | **1.8M** | **1×** | **Custom architecture** |
+| **Micro-BERT (ours)** | **10.1M** | **5.6×** | **Custom architecture** |
 
 ### 5.5 Observations
 - The model performs well on factoid questions with explicit spans.
@@ -171,19 +171,19 @@ Running `python train.py` followed by `python run_evaluation.py` on the sample d
   1. Questions requiring inference across multiple sentences.
   2. Ambiguous questions with multiple valid spans.
   3. Very long passages where the answer span sits exactly on a chunk boundary.
-  4. With only 2 layers, the model has limited capacity for complex syntactic structures.
+  4. With 4 layers, the model has moderate capacity but still struggles on questions requiring deep reasoning or long-range dependencies.
 
 ---
 
 ## 6. Analysis & Discussion
 
 ### 6.1 Strengths
-- **Extremely lightweight:** At 1.8M parameters, the model is deployable on edge devices and runs inference in milliseconds on CPU.
+- **Lightweight:** At ~10M parameters, the model is small enough for CPU inference and lightweight deployment while retaining meaningful QA capability.
 - **End-to-end pipeline:** The project demonstrates the complete ML lifecycle from architecture design to deployment.
 - **Educational value:** The small scale makes it feasible to inspect attention weights and intermediate representations.
 
 ### 6.2 Limitations
-- **Lower capacity:** With only 2 layers and 56 hidden dimensions, Micro-BERT struggles on questions requiring deep reasoning or long-range dependencies.
+- **Moderate capacity:** With 4 layers and 256 hidden dimensions, Micro-BERT handles simple factoids well but still struggles on questions requiring deep reasoning or long-range dependencies.
 - **Extractive only:** Cannot synthesize answers not present verbatim in the text.
 - **No pre-training:** Unlike DistilBERT or TinyBERT, our model is trained from scratch on SQuAD only. Pre-training on a general corpus would likely improve performance.
 - **Language:** Limited to English (uncased model).
@@ -198,7 +198,7 @@ Running `python train.py` followed by `python run_evaluation.py` on the sample d
 
 ## 7. Conclusion
 
-This project demonstrates that transformer-based extractive QA is feasible with fewer than 2 million parameters. By designing a custom Micro-BERT architecture and providing a complete training and evaluation pipeline, we achieve competitive results on small-scale reading comprehension tasks while maintaining extreme efficiency. The accompanying web demo and reproducible scripts make the work fully accessible for educational purposes.
+This project demonstrates that transformer-based extractive QA is feasible with approximately 10 million parameters. By designing a custom Micro-BERT architecture and providing a complete training and evaluation pipeline, we achieve competitive results on small-scale reading comprehension tasks while maintaining extreme efficiency. The accompanying web demo and reproducible scripts make the work fully accessible for educational purposes.
 
 ---
 
