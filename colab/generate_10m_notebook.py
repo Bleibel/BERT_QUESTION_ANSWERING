@@ -231,6 +231,9 @@ Test the model on 1,000 validation examples.
 
 cells.append(code_cell(r"""
 # @title 8. Evaluate
+import os
+if not os.path.exists('/content/BERT_QUESTION_ANSWERING'):
+    !git clone https://github.com/Bleibel/BERT_QUESTION_ANSWERING.git /content/BERT_QUESTION_ANSWERING
 %cd /content/BERT_QUESTION_ANSWERING
 !python run_evaluation.py \
     --dataset squad \
@@ -242,7 +245,10 @@ cells.append(code_cell(r"""
 # ===== Show results =====
 cells.append(code_cell(r"""
 # @title 9. Display evaluation results
-import json
+import os, json
+if not os.path.exists('/content/BERT_QUESTION_ANSWERING'):
+    !git clone https://github.com/Bleibel/BERT_QUESTION_ANSWERING.git /content/BERT_QUESTION_ANSWERING
+%cd /content/BERT_QUESTION_ANSWERING
 
 results_path = "results/eval_results.json"
 if os.path.exists(results_path):
@@ -273,6 +279,9 @@ Keep your checkpoint permanently.
 
 cells.append(code_cell(r"""
 # @title 10. Save checkpoint to Drive
+import os
+if not os.path.exists('/content/BERT_QUESTION_ANSWERING'):
+    !git clone https://github.com/Bleibel/BERT_QUESTION_ANSWERING.git /content/BERT_QUESTION_ANSWERING
 %cd /content/BERT_QUESTION_ANSWERING
 from google.colab import drive
 drive.mount('/content/drive')
@@ -298,6 +307,9 @@ Run inference on any passage + question.
 
 cells.append(code_cell(r"""
 # @title 11. Test your model
+import os
+if not os.path.exists('/content/BERT_QUESTION_ANSWERING'):
+    !git clone https://github.com/Bleibel/BERT_QUESTION_ANSWERING.git /content/BERT_QUESTION_ANSWERING
 %cd /content/BERT_QUESTION_ANSWERING
 from src.model import BERTQA
 
